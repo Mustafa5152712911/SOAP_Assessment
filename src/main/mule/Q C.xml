@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:wsc="http://www.mulesoft.org/schema/mule/wsc"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/wsc http://www.mulesoft.org/schema/mule/wsc/current/mule-wsc.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<flow name="Q_CFlow" doc:id="89a92ddc-b83b-4428-b863-847fc6ca4fac" >
+		<http:listener doc:name="Listener" doc:id="2fae66b7-2eec-44a8-9b45-d9a66d4a19e1" config-ref="HTTP_Listener_config" path="/FullCountryInfo"/>
+		<set-variable value="#[payload.sCountryISOCode]" doc:name="Set Variable" doc:id="1370de45-38b5-4e8e-a9d8-23c099994000" variableName="CountryISOCode"/>
+		<ee:transform doc:name="Transform Message" doc:id="affaec1b-0b32-407c-bdb0-35129e568c5b" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/xml
+ns ns0 http://schemas.xmlsoap.org
+ns ns1 http://www.oorsprong.org/websamples.countryinfo
+  
+---
+{
+	ns1#FullCountryInfo:{
+	ns1# sCurrencyISOCode: vars.CountryISOCode
+	}
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<wsc:consume operation="FullCountryInfo" doc:name="Consume" doc:id="2bf2c5d9-8f77-4225-bd58-bf1a12deeab7" config-ref="Web_Service_Consumer_Config"/>
+		<ee:transform doc:name="Transform Message" doc:id="f041d147-622c-42c9-8ac2-fb6413924cb4" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/xml
+---
+{
+	result: payload.body
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="e664a74a-06b4-4dfe-9244-fcd8f478738e" type="ANY">
+				<logger level="INFO" doc:name="Logger" doc:id="008f7508-18c1-4aac-a152-b93548080946" message='"Unable to process the SOAP Operation"'/>
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+</mule>

@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:wsc="http://www.mulesoft.org/schema/mule/wsc"
+	xmlns:jms="http://www.mulesoft.org/schema/mule/jms"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/current/mule-jms.xsd
+http://www.mulesoft.org/schema/mule/wsc http://www.mulesoft.org/schema/mule/wsc/current/mule-wsc.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="a36e3dba-35e9-4b43-8b4a-69ea8df8ef7a" >
+		<http:listener-connection host="localhost" port="8081" />
+	</http:listener-config>
+	<wsc:config name="Web_Service_Consumer_Config" doc:name="Web Service Consumer Config" doc:id="7104b047-42a9-4930-9985-58e85bbebb5b" >
+		<wsc:connection wsdlLocation="http://webservices.oorsprong.org/websamples.countryinfo/CountryInfoService.wso?WSDL" service="CountryInfoService" port="CountryInfoServiceSoap" address="http://webservices.oorsprong.org/websamples.countryinfo/CountryInfoService.wso" />
+	</wsc:config>
+	<flow name="E" doc:id="bb8a8b43-9b80-4ff6-925f-55216711f1ef" >
+		<http:listener doc:name="Listener" doc:id="fbd3c6fb-d2a2-4b5d-ae36-dbbf65ee167f" config-ref="HTTP_Listener_config" path="/location"/>
+		<set-variable value="#[payload.inputIsoCode]" doc:name="Set Variable" doc:id="433caecd-4103-4b5c-ab4e-8d369fc183bf" variableName="IsoCode"/>
+		<ee:transform doc:name="Transform Message" doc:id="66780616-5f92-463a-a35c-a7f6f02663ff" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/xml
+ns ns0 http://schemas.xmlsoap.org
+---
+{
+	ns0#CurrencyName:{
+	ns0# sCurrencyISOCode: vars.IsoCode
+	}
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<try doc:name="Try" doc:id="231ed26d-5090-4176-b875-021d361e1c33" >
+			<wsc:consume operation="CurrencyName" doc:id="db74b9e7-4c0e-4690-97ab-6904415ba8c0" config-ref="Web_Service_Consumer_Config">
+		</wsc:consume>
+			<error-handler >
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="5d8f1f78-ad34-4391-a9fc-24233cdf1d14" type="ANY">
+					<logger level="ERROR" doc:name="Logger" doc:id="265a99fc-fc14-4f08-8177-bc9d2193f2a1" message='"Unable to Process SOAP Operation.."'/>
+				</on-error-propagate>
+			</error-handler>
+		</try>
+		<ee:transform doc:name="Transform Message" doc:id="0f472d54-177c-482a-968c-b1a9bbdba6dd" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/xml
+---
+{
+	result: payload.body
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+</mule>
